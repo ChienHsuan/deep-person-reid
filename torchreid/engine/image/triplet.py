@@ -1,5 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
+import torch
+
 from torchreid import metrics
 from torchreid.losses import TripletLoss, CrossEntropyLoss
 
@@ -98,7 +100,7 @@ class ImageTripletEngine(Engine):
             pids = pids.cuda()
 
         outputs, features = self.model(imgs)
-
+        
         loss = 0
         loss_summary = {}
 

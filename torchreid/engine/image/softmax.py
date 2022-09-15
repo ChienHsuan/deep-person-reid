@@ -1,5 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
+import torch
+
 from torchreid import metrics
 from torchreid.losses import CrossEntropyLoss
 
@@ -82,7 +84,8 @@ class ImageSoftmaxEngine(Engine):
             imgs = imgs.cuda()
             pids = pids.cuda()
 
-        outputs = self.model(imgs)
+        outputs, _ = self.model(imgs)
+        
         loss = self.compute_loss(self.criterion, outputs, pids)
 
         self.optimizer.zero_grad()

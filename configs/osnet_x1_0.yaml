@@ -1,0 +1,48 @@
+use_gpu: True
+
+model:
+  name: 'osnet_x1_0'
+  pretrained: True
+
+data:
+  type: 'image'
+  sources: ['market1501']
+  targets: ['market1501', 'dukemtmcreid']
+  height: 256
+  width: 128
+  combineall: False
+  transforms: ['random_figures', 'random_padding', 'random_flip',
+               'color_jitter', 'random_rotate', 'random_erase']
+  save_dir: 'log/osnet_x1_0/'
+  workers: 4
+
+sampler:
+  train_sampler: 'RandomIdentitySampler'
+
+loss:
+  name: 'triplet'
+  softmax:
+    label_smooth: True
+  triplet:
+    weight_x: 1.0
+    weight_t: 1.0
+
+train:
+  optim: 'amsgrad'
+  lr: 0.0015
+  max_epoch: 100
+  batch_size: 64
+  fixbase_epoch: 10
+  open_layers: ['classifier']
+  lr_scheduler: 'cosine'
+  stepsize: []
+  seed: 1
+  deterministic: True
+
+test:
+  batch_size: 300
+  dist_metric: 'cosine'
+  normalize_feature: False
+  evaluate: False
+  eval_freq: -1
+  rerank: False

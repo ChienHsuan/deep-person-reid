@@ -1,0 +1,50 @@
+use_gpu: True
+
+model:
+  name: 'osnet_ain_x0_5'
+  load_weights: '/home/lab314/HDD/Hsuan/models/osnet_ain_x0_5/model_best.pth.tar'
+  pretrained: False
+
+data:
+  type: 'image'
+  sources: ['market1501']
+  targets: ['dukemtmcreid']
+  height: 192
+  width: 96
+  combineall: False
+  transforms: ['random_figures', 'random_padding', 'random_flip',
+               'color_jitter', 'random_rotate', 'random_erase']
+  save_dir: 'log/test/'
+  workers: 4
+
+sampler:
+  train_sampler: 'RandomIdentitySampler'
+
+loss:
+  name: 'triplet'
+  softmax:
+    label_smooth: True
+  triplet:
+    weight_x: 1.0
+    weight_t: 1.0
+
+train:
+  optim: 'amsgrad'
+  lr: 0.0015
+  max_epoch: 100
+  batch_size: 128
+  fixbase_epoch: 10
+  open_layers: ['classifier']
+  lr_scheduler: 'cosine'
+  stepsize: []
+
+test:
+  batch_size: 300
+  ranks: [1, 5, 10]
+  dist_metric: 'cosine'
+  normalize_feature: False
+  evaluate: True
+  eval_freq: -1
+  rerank: False
+  visrank: True
+  visrank_topk: 10

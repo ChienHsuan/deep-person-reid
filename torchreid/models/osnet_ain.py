@@ -1,14 +1,21 @@
-from __future__ import division, absolute_import
 import warnings
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-__all__ = ['osnet_ain_x1_0']
+__all__ = [
+    'osnet_ain_x1_0', 'osnet_ain_x0_75', 'osnet_ain_x0_5', 'osnet_ain_x0_25'
+]
 
 pretrained_urls = {
     'osnet_ain_x1_0':
-    'https://drive.google.com/uc?id=1-CaioD9NaqbHK_kzSMW8VE4_3KcsRjEo'
+    'https://drive.google.com/uc?id=1-CaioD9NaqbHK_kzSMW8VE4_3KcsRjEo',
+    'osnet_ain_x0_75':
+    'https://drive.google.com/uc?id=1apy0hpsMypqstfencdH-jKIUEFOW4xoM',
+    'osnet_ain_x0_5':
+    'https://drive.google.com/uc?id=1KusKvEYyKGDTUBVRxRiz55G31wkihB6l',
+    'osnet_ain_x0_25':
+    'https://drive.google.com/uc?id=1SxQt2AvmEcgWNhaRb2xC4rP6ZwVDP0Wt'
 }
 
 
@@ -117,7 +124,6 @@ class Conv3x3(nn.Module):
 
 class LightConv3x3(nn.Module):
     """Lightweight 3x3 convolution.
-
     1x1 (linear) + dw 3x3 (nonlinear).
     """
 
@@ -314,7 +320,6 @@ class OSNet(nn.Module):
         layers,
         channels,
         feature_dim=512,
-        loss='softmax',
         conv1_IN=False,
         **kwargs
     ):
@@ -322,7 +327,6 @@ class OSNet(nn.Module):
         num_blocks = len(blocks)
         assert num_blocks == len(layers)
         assert num_blocks == len(channels) - 1
-        self.loss = loss
         self.feature_dim = feature_dim
 
         # convolutional backbone
@@ -421,23 +425,20 @@ class OSNet(nn.Module):
         x = self.conv5(x)
         return x
 
-    def forward(self, x, return_featuremaps=False):
-        x = self.featuremaps(x)
-        if return_featuremaps:
-            return x
-        v = self.global_avgpool(x)
-        v = v.view(v.size(0), -1)
-        if self.fc is not None:
-            v = self.fc(v)
-        if not self.training:
-            return v
-        y = self.classifier(v)
-        if self.loss == 'softmax':
-            return y
-        elif self.loss == 'triplet':
-            return y, v
+    def forward(self, x):
+        if self.training:
+            x = self.featuremaps(x)
+            f = self.global_avgpool(x)
+            f = f.view(f.size(0), -1)
+            f = self.fc(f)
+            y = self.classifier(f)
+            return y, f
         else:
-            raise KeyError("Unsupported loss: {}".format(self.loss))
+            x = self.featuremaps(x)
+            f = self.global_avgpool(x)
+            f = f.view(f.size(0), -1)
+            f = self.fc(f)
+            return f
 
 
 def init_pretrained_weights(model, key=''):
@@ -450,22 +451,8 @@ def init_pretrained_weights(model, key=''):
     import gdown
     from collections import OrderedDict
 
-    def _get_torch_home():
-        ENV_TORCH_HOME = 'TORCH_HOME'
-        ENV_XDG_CACHE_HOME = 'XDG_CACHE_HOME'
-        DEFAULT_CACHE_DIR = '~/.cache'
-        torch_home = os.path.expanduser(
-            os.getenv(
-                ENV_TORCH_HOME,
-                os.path.join(
-                    os.getenv(ENV_XDG_CACHE_HOME, DEFAULT_CACHE_DIR), 'torch'
-                )
-            )
-        )
-        return torch_home
 
-    torch_home = _get_torch_home()
-    model_dir = os.path.join(torch_home, 'checkpoints')
+    model_dir = './imagenet_pretrained_models/'
     try:
         os.makedirs(model_dir)
     except OSError as e:
@@ -482,6 +469,7 @@ def init_pretrained_weights(model, key=''):
         gdown.download(pretrained_urls[key], cached_file, quiet=False)
 
     state_dict = torch.load(cached_file)
+
     model_dict = model.state_dict()
     new_state_dict = OrderedDict()
     matched_layers, discarded_layers = [], []
@@ -522,7 +510,8 @@ def init_pretrained_weights(model, key=''):
 # Instantiation
 ##########
 def osnet_ain_x1_0(
-    num_classes=1000, pretrained=True, loss='softmax', **kwargs
+    num_classes=1000, pretrained=True,
+    **kwargs
 ):
     model = OSNet(
         num_classes,
@@ -532,10 +521,70 @@ def osnet_ain_x1_0(
         ],
         layers=[2, 2, 2],
         channels=[64, 256, 384, 512],
-        loss=loss,
         conv1_IN=True,
         **kwargs
     )
     if pretrained:
         init_pretrained_weights(model, key='osnet_ain_x1_0')
     return model
+
+
+def osnet_ain_x0_75(
+    num_classes=1000, pretrained=True,
+    **kwargs
+):
+    model = OSNet(
+        num_classes,
+        blocks=[
+            [OSBlockINin, OSBlockINin], [OSBlock, OSBlockINin],
+            [OSBlockINin, OSBlock]
+        ],
+        layers=[2, 2, 2],
+        channels=[48, 192, 288, 384],
+        conv1_IN=True,
+        **kwargs
+    )
+    if pretrained:
+        init_pretrained_weights(model, key='osnet_ain_x0_75')
+    return model
+
+
+def osnet_ain_x0_5(
+    num_classes=1000, pretrained=True,
+    **kwargs
+):
+    model = OSNet(
+        num_classes,
+        blocks=[
+            [OSBlockINin, OSBlockINin], [OSBlock, OSBlockINin],
+            [OSBlockINin, OSBlock]
+        ],
+        layers=[2, 2, 2],
+        channels=[32, 128, 192, 256],
+        conv1_IN=True,
+        **kwargs
+    )
+    if pretrained:
+        init_pretrained_weights(model, key='osnet_ain_x0_5')
+    return model
+
+
+def osnet_ain_x0_25(
+    num_classes=1000, pretrained=True,
+    **kwargs
+):
+    model = OSNet(
+        num_classes,
+        blocks=[
+            [OSBlockINin, OSBlockINin], [OSBlock, OSBlockINin],
+            [OSBlockINin, OSBlock]
+        ],
+        layers=[2, 2, 2],
+        channels=[16, 64, 96, 128],
+        conv1_IN=True,
+        **kwargs
+    )
+    if pretrained:
+        init_pretrained_weights(model, key='osnet_ain_x0_25')
+    return model
+    

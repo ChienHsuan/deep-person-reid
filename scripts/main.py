@@ -36,7 +36,7 @@ def build_engine(cfg, datamanager, model, optimizer, scheduler):
                 label_smooth=cfg.loss.softmax.label_smooth
             )
 
-        else:
+        elif cfg.loss.name == 'triplet':
             engine = torchreid.engine.ImageTripletEngine(
                 datamanager,
                 model,
@@ -47,6 +47,29 @@ def build_engine(cfg, datamanager, model, optimizer, scheduler):
                 scheduler=scheduler,
                 use_gpu=cfg.use_gpu,
                 label_smooth=cfg.loss.softmax.label_smooth
+            )
+
+        elif cfg.loss.name == 'amsoftmax':
+            engine = torchreid.engine.ImageAngularLossEngine(
+                datamanager,
+                model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                use_gpu=cfg.use_gpu,
+                label_smooth=cfg.loss.softmax.label_smooth,
+                type=cfg.loss.name,
+                use_triplet=True
+            )
+
+        elif cfg.loss.name == 'arcface':
+            engine = torchreid.engine.ImageAngularLossEngine(
+                datamanager,
+                model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                use_gpu=cfg.use_gpu,
+                label_smooth=cfg.loss.softmax.label_smooth,
+                type=cfg.loss.name
             )
 
     else:
@@ -135,7 +158,7 @@ def main():
         cfg.merge_from_file(args.config_file)
     reset_config(cfg, args)
     cfg.merge_from_list(args.opts)
-    set_random_seed(cfg.train.seed)
+    set_random_seed(cfg.train.seed, cfg.train.deterministic)
     check_cfg(cfg)
 
     log_name = 'test.log' if cfg.test.evaluate else 'train.log'
@@ -146,18 +169,16 @@ def main():
     print('Collecting env info ...')
     print('** System info **\n{}\n'.format(collect_env_info()))
 
-    if cfg.use_gpu:
+    if cfg.use_gpu and not cfg.train.deterministic:
         torch.backends.cudnn.benchmark = True
 
     datamanager = build_datamanager(cfg)
 
     print('Building model: {}'.format(cfg.model.name))
     model = torchreid.models.build_model(
-        name=cfg.model.name,
-        num_classes=datamanager.num_train_pids,
-        loss=cfg.loss.name,
-        pretrained=cfg.model.pretrained,
-        use_gpu=cfg.use_gpu
+        cfg.model.name,
+        datamanager.num_train_pids,
+        pretrained=cfg.model.pretrained
     )
     num_params, flops = compute_model_complexity(
         model, (1, 3, cfg.data.height, cfg.data.width)

@@ -6,34 +6,31 @@ from torch.nn import init
 import torchvision
 import torch
 
-
-__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
-           'resnet152']
+from .resnet_ibn_a import resnet50_ibn_a, resnet101_ibn_a
 
 
-class ResNet(nn.Module):
+__all__ = ['ResNetIBN', 'resnet_ibn50a', 'resnet_ibn101a']
+
+
+class ResNetIBN(nn.Module):
     __factory = {
-        18: torchvision.models.resnet18,
-        34: torchvision.models.resnet34,
-        50: torchvision.models.resnet50,
-        101: torchvision.models.resnet101,
-        152: torchvision.models.resnet152,
+        '50a': resnet50_ibn_a,
+        '101a': resnet101_ibn_a
     }
 
     def __init__(self, depth, pretrained=True, cut_at_pooling=False,
                  features_size=0, norm=False, dropout=0, num_classes=0, **kwargs):
-        super(ResNet, self).__init__()
-        self.pretrained = pretrained
+        super(ResNetIBN, self).__init__()
+
         self.depth = depth
+        self.pretrained = pretrained
         self.cut_at_pooling = cut_at_pooling
-        # Construct base (pretrained) resnet
-        if depth not in ResNet.__factory:
-            raise KeyError("Unsupported depth:", depth)
-        resnet = ResNet.__factory[depth](pretrained=pretrained)
+
+        resnet = ResNetIBN.__factory[depth](pretrained=pretrained)
         resnet.layer4[0].conv2.stride = (1,1)
         resnet.layer4[0].downsample[0].stride = (1,1)
         self.base = nn.Sequential(
-            resnet.conv1, resnet.bn1, resnet.maxpool, # no relu
+            resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool,
             resnet.layer1, resnet.layer2, resnet.layer3, resnet.layer4)
         self.gap = nn.AdaptiveAvgPool2d(1)
 
@@ -120,30 +117,20 @@ class ResNet(nn.Module):
                 if m.bias is not None:
                     init.constant_(m.bias, 0)
 
-        resnet = ResNet.__factory[self.depth](pretrained=self.pretrained)
+        resnet = ResNetIBN.__factory[self.depth](pretrained=self.pretrained)
         self.base[0].load_state_dict(resnet.conv1.state_dict())
         self.base[1].load_state_dict(resnet.bn1.state_dict())
-        self.base[2].load_state_dict(resnet.maxpool.state_dict())
-        self.base[3].load_state_dict(resnet.layer1.state_dict())
-        self.base[4].load_state_dict(resnet.layer2.state_dict())
-        self.base[5].load_state_dict(resnet.layer3.state_dict())
-        self.base[6].load_state_dict(resnet.layer4.state_dict())
-
-def resnet18(**kwargs):
-    return ResNet(18, **kwargs)
+        self.base[2].load_state_dict(resnet.relu.state_dict())
+        self.base[3].load_state_dict(resnet.maxpool.state_dict())
+        self.base[4].load_state_dict(resnet.layer1.state_dict())
+        self.base[5].load_state_dict(resnet.layer2.state_dict())
+        self.base[6].load_state_dict(resnet.layer3.state_dict())
+        self.base[7].load_state_dict(resnet.layer4.state_dict())
 
 
-def resnet34(**kwargs):
-    return ResNet(34, **kwargs)
+def resnet_ibn50a(**kwargs):
+    return ResNetIBN('50a', **kwargs)
 
 
-def resnet50(**kwargs):
-    return ResNet(50, **kwargs)
-
-
-def resnet101(**kwargs):
-    return ResNet(101, **kwargs)
-
-
-def resnet152(**kwargs):
-    return ResNet(152, **kwargs)
+def resnet_ibn101a(**kwargs):
+    return ResNetIBN('101a', **kwargs)

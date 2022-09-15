@@ -1,4 +1,3 @@
-from __future__ import division, absolute_import
 import warnings
 import torch
 from torch import nn
@@ -295,7 +294,6 @@ class OSNet(nn.Module):
         layers,
         channels,
         feature_dim=512,
-        loss='softmax',
         IN=False,
         **kwargs
     ):
@@ -303,7 +301,6 @@ class OSNet(nn.Module):
         num_blocks = len(blocks)
         assert num_blocks == len(layers)
         assert num_blocks == len(channels) - 1
-        self.loss = loss
         self.feature_dim = feature_dim
 
         # convolutional backbone
@@ -419,23 +416,20 @@ class OSNet(nn.Module):
         x = self.conv5(x)
         return x
 
-    def forward(self, x, return_featuremaps=False):
-        x = self.featuremaps(x)
-        if return_featuremaps:
-            return x
-        v = self.global_avgpool(x)
-        v = v.view(v.size(0), -1)
-        if self.fc is not None:
-            v = self.fc(v)
-        if not self.training:
-            return v
-        y = self.classifier(v)
-        if self.loss == 'softmax':
-            return y
-        elif self.loss == 'triplet':
-            return y, v
+    def forward(self, x):
+        if self.training:
+            x = self.featuremaps(x)
+            f = self.global_avgpool(x)
+            f = f.view(f.size(0), -1)
+            f = self.fc(f)
+            y = self.classifier(f)
+            return y, f
         else:
-            raise KeyError("Unsupported loss: {}".format(self.loss))
+            x = self.featuremaps(x)
+            f = self.global_avgpool(x)
+            f = f.view(f.size(0), -1)
+            f = self.fc(f)
+            return f
 
 
 def init_pretrained_weights(model, key=''):
@@ -448,22 +442,8 @@ def init_pretrained_weights(model, key=''):
     import gdown
     from collections import OrderedDict
 
-    def _get_torch_home():
-        ENV_TORCH_HOME = 'TORCH_HOME'
-        ENV_XDG_CACHE_HOME = 'XDG_CACHE_HOME'
-        DEFAULT_CACHE_DIR = '~/.cache'
-        torch_home = os.path.expanduser(
-            os.getenv(
-                ENV_TORCH_HOME,
-                os.path.join(
-                    os.getenv(ENV_XDG_CACHE_HOME, DEFAULT_CACHE_DIR), 'torch'
-                )
-            )
-        )
-        return torch_home
 
-    torch_home = _get_torch_home()
-    model_dir = os.path.join(torch_home, 'checkpoints')
+    model_dir = './imagenet_pretrained_models/'
     try:
         os.makedirs(model_dir)
     except OSError as e:
@@ -480,6 +460,7 @@ def init_pretrained_weights(model, key=''):
         gdown.download(pretrained_urls[key], cached_file, quiet=False)
 
     state_dict = torch.load(cached_file)
+
     model_dict = model.state_dict()
     new_state_dict = OrderedDict()
     matched_layers, discarded_layers = [], []
@@ -519,68 +500,69 @@ def init_pretrained_weights(model, key=''):
 ##########
 # Instantiation
 ##########
-def osnet_x1_0(num_classes=1000, pretrained=True, loss='softmax', **kwargs):
+def osnet_x1_0(num_classes=1000, pretrained=True,
+    **kwargs
+):
     # standard size (width x1.0)
     model = OSNet(
         num_classes,
         blocks=[OSBlock, OSBlock, OSBlock],
         layers=[2, 2, 2],
         channels=[64, 256, 384, 512],
-        loss=loss,
         **kwargs
     )
     if pretrained:
         init_pretrained_weights(model, key='osnet_x1_0')
     return model
 
-
-def osnet_x0_75(num_classes=1000, pretrained=True, loss='softmax', **kwargs):
+def osnet_x0_75(num_classes=1000, pretrained=True,
+    **kwargs
+):
     # medium size (width x0.75)
     model = OSNet(
         num_classes,
         blocks=[OSBlock, OSBlock, OSBlock],
         layers=[2, 2, 2],
         channels=[48, 192, 288, 384],
-        loss=loss,
         **kwargs
     )
     if pretrained:
         init_pretrained_weights(model, key='osnet_x0_75')
     return model
 
-
-def osnet_x0_5(num_classes=1000, pretrained=True, loss='softmax', **kwargs):
+def osnet_x0_5(num_classes=1000, pretrained=True,
+    **kwargs
+):
     # tiny size (width x0.5)
     model = OSNet(
         num_classes,
         blocks=[OSBlock, OSBlock, OSBlock],
         layers=[2, 2, 2],
         channels=[32, 128, 192, 256],
-        loss=loss,
         **kwargs
     )
     if pretrained:
         init_pretrained_weights(model, key='osnet_x0_5')
     return model
 
-
-def osnet_x0_25(num_classes=1000, pretrained=True, loss='softmax', **kwargs):
+def osnet_x0_25(num_classes=1000, pretrained=True,
+    **kwargs
+):
     # very tiny size (width x0.25)
     model = OSNet(
         num_classes,
         blocks=[OSBlock, OSBlock, OSBlock],
         layers=[2, 2, 2],
         channels=[16, 64, 96, 128],
-        loss=loss,
         **kwargs
     )
     if pretrained:
         init_pretrained_weights(model, key='osnet_x0_25')
     return model
 
-
 def osnet_ibn_x1_0(
-    num_classes=1000, pretrained=True, loss='softmax', **kwargs
+    num_classes=1000, pretrained=True,
+    **kwargs
 ):
     # standard size (width x1.0) + IBN layer
     # Ref: Pan et al. Two at Once: Enhancing Learning and Generalization Capacities via IBN-Net. ECCV, 2018.
@@ -589,7 +571,6 @@ def osnet_ibn_x1_0(
         blocks=[OSBlock, OSBlock, OSBlock],
         layers=[2, 2, 2],
         channels=[64, 256, 384, 512],
-        loss=loss,
         IN=True,
         **kwargs
     )

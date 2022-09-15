@@ -82,6 +82,7 @@ class MSMT17(ImageDataset):
 
         super(MSMT17, self).__init__(train, query, gallery, **kwargs)
 
+    # with a slight modification
     def process_dir(self, dir_path, list_path):
         with open(list_path, 'r') as txt:
             lines = txt.readlines()
@@ -90,9 +91,18 @@ class MSMT17(ImageDataset):
 
         for img_idx, img_info in enumerate(lines):
             img_path, pid = img_info.split(' ')
+
             pid = int(pid) # no need to relabel
+
             camid = int(img_path.split('_')[2]) - 1 # index starts from 0
+
+            str1, str2, str3 = img_path.split('_')[0:3]
+            str1 = str1.split('/')[1]
+            str2 = '0' + str2
+            str3 = 'c' + str(int(str3))
+            img_path = str1 + '_' + str3 + '_' + str2 + '.jpg'
             img_path = osp.join(dir_path, img_path)
+
             data.append((img_path, pid, camid))
 
         return data

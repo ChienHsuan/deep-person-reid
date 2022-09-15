@@ -1,4 +1,3 @@
-from __future__ import division, absolute_import
 import copy
 import numpy as np
 import random
@@ -13,7 +12,6 @@ AVAI_SAMPLERS = [
 
 class RandomIdentitySampler(Sampler):
     """Randomly samples N identities each with K instances.
-
     Args:
         data_source (list): contains tuples of (img_path(s), pid, camid, dsetid).
         batch_size (int): batch size.
@@ -84,13 +82,10 @@ class RandomIdentitySampler(Sampler):
 
 class RandomDomainSampler(Sampler):
     """Random domain sampler.
-
     We consider each camera as a visual domain.
-
     How does the sampling work:
     1. Randomly sample N cameras (based on the "camid" label).
     2. From each camera, randomly sample K images.
-
     Args:
         data_source (list): contains tuples of (img_path(s), pid, camid, dsetid).
         batch_size (int): batch size.
@@ -145,11 +140,9 @@ class RandomDomainSampler(Sampler):
 
 class RandomDatasetSampler(Sampler):
     """Random dataset sampler.
-
     How does the sampling work:
     1. Randomly sample N datasets (based on the "dsetid" label).
     2. From each dataset, randomly sample K images.
-
     Args:
         data_source (list): contains tuples of (img_path(s), pid, camid, dsetid).
         batch_size (int): batch size.
@@ -212,7 +205,6 @@ def build_train_sampler(
     **kwargs
 ):
     """Builds a training sampler.
-
     Args:
         data_source (list): contains tuples of (img_path(s), pid, camid).
         train_sampler (str): sampler name (default: ``RandomSampler``).

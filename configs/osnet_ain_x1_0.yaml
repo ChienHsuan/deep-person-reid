@@ -1,3 +1,5 @@
+use_gpu: True
+
 model:
   name: 'osnet_ain_x1_0'
   pretrained: True
@@ -9,13 +11,21 @@ data:
   height: 256
   width: 128
   combineall: False
-  transforms: ['random_flip', 'color_jitter']
-  save_dir: 'log/osnet_ain_x1_0_market1501_softmax_cosinelr'
+  transforms: ['random_figures', 'random_padding', 'random_flip',
+               'color_jitter', 'random_rotate', 'random_erase']
+  save_dir: 'log/osnet_ain_x1_0/'
+  workers: 4
+
+sampler:
+  train_sampler: 'RandomIdentitySampler'
 
 loss:
-  name: 'softmax'
+  name: 'triplet'
   softmax:
     label_smooth: True
+  triplet:
+    weight_x: 1.0
+    weight_t: 1.0
 
 train:
   optim: 'amsgrad'
@@ -25,6 +35,9 @@ train:
   fixbase_epoch: 10
   open_layers: ['classifier']
   lr_scheduler: 'cosine'
+  stepsize: []
+  seed: 1
+  deterministic: True
 
 test:
   batch_size: 300

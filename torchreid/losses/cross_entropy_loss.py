@@ -47,4 +47,4 @@ class CrossEntropyLoss(nn.Module):
         if self.use_gpu:
             targets = targets.cuda()
         targets = (1 - self.eps) * targets + self.eps / self.num_classes
-        return (-targets * log_probs).mean(0).sum()
+        return (-targets * log_probs).sum(dim=1).mean()
