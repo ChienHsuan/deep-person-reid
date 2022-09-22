@@ -2,7 +2,7 @@ use_gpu: True
 
 model:
   name: 'osnet_ain_x0_5'
-  load_weights: '/home/lab314/HDD/Hsuan/models/osnet_ain_x0_5/model_best.pth.tar'
+  load_weights: '/USER-DEFINED-PATH/model_best.pth.tar'
   pretrained: False
 
 data:

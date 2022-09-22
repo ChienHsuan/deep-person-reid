@@ -1,4 +1,4 @@
-DATA_DIR="/nfs/datasets/"
+DATA_DIR="/USER-DEFINED-PATH/Dataset/"
 CONFIG_FILE="configs/osnet_ain_x0_5.yaml"
 
 echo "Begin to train."
